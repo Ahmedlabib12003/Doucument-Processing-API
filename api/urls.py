@@ -5,6 +5,8 @@ from .views import (
     PDFListView,
     ImageDetailView,
     PDFDetailView,
+    ImageRotationView,
+    PDFToImageView,
 )
 
 urlpatterns = [
@@ -13,4 +15,10 @@ urlpatterns = [
     path("pdfs/", PDFListView.as_view(), name="pdf-list"),
     path("images/<int:pk>/", ImageDetailView.as_view(), name="image-detail"),
     path("pdfs/<int:pk>/", PDFDetailView.as_view(), name="pdf-detail"),
+    path("rotate/<int:image_id>/", ImageRotationView.as_view(), name="image-rotate"),
+    path(
+        "convert-pdf-to-image/<int:pdf_id>/",
+        PDFToImageView.as_view(),
+        name="pdf-to-image",
+    ),
 ]

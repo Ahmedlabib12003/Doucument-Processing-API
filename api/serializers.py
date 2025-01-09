@@ -241,3 +241,39 @@ class PDFDetailSerializer(serializers.ModelSerializer):
                 return pdf.metadata.get("/CreationDate", None)
         except Exception:
             return None
+
+
+class ImageRotationSerializer(serializers.Serializer):
+    """
+    Serializer for handling image rotation requests.
+    Validates the rotation angle and creates a new image instance for the rotated result.
+    """
+
+    angle = serializers.IntegerField(
+        min_value=-360, max_value=360, help_text="Rotation angle in degrees (clockwise)"
+    )
+
+    def validate_angle(self, value):
+        """Normalize angle to be between 0 and 360 degrees"""
+        return value % 360
+
+
+class PDFToImageSerializer(serializers.Serializer):
+    """
+    Serializer for handling PDF to image conversion requests.
+    Allows specifying which page to convert and the output format.
+    """
+
+    page_number = serializers.IntegerField(
+        min_value=1,
+        required=False,
+        default=1,
+        help_text="Page number to convert (defaults to first page)",
+    )
+    dpi = serializers.IntegerField(
+        min_value=72,
+        max_value=600,
+        required=False,
+        default=200,
+        help_text="DPI for the output image",
+    )
