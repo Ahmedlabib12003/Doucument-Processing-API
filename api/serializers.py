@@ -8,13 +8,15 @@ from django.conf import settings
 from .models import Image, PDF
 import uuid
 
+
 class FileUploadSerializer(serializers.Serializer):
     """
     Serializer for handling file uploads in base64 format.
     """
+
     file = serializers.CharField()  # Base64 encoded file
     title = serializers.CharField()
-    file_type = serializers.ChoiceField(choices=['image', 'pdf'])
+    file_type = serializers.ChoiceField(choices=["image", "pdf"])
 
     def validate_file(self, value):
         """Validate the base64 encoded file."""
@@ -26,9 +28,9 @@ class FileUploadSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid base64 encoding")
 
     def create(self, validated_data):
-        file_data = validated_data['file']
-        file_type = validated_data['file_type']
-        title = validated_data['title']
+        file_data = validated_data["file"]
+        file_type = validated_data["file_type"]
+        title = validated_data["title"]
 
         # Decode base64 data
         try:
@@ -38,19 +40,19 @@ class FileUploadSerializer(serializers.Serializer):
 
         # Generate unique filename
         filename = f"{uuid.uuid4().hex}"
-        
-        if file_type == 'image':
-            file_path = os.path.join(settings.MEDIA_ROOT, 'images', f"{filename}.jpg")
+
+        if file_type == "image":
+            file_path = os.path.join(settings.MEDIA_ROOT, "images", f"{filename}.jpg")
             model_class = Image
         else:
-            file_path = os.path.join(settings.MEDIA_ROOT, 'pdfs', f"{filename}.pdf")
+            file_path = os.path.join(settings.MEDIA_ROOT, "pdfs", f"{filename}.pdf")
             model_class = PDF
 
         # Ensure directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         # Save file
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(file_content)
 
         # Create model instance with file metadata
@@ -58,13 +60,13 @@ class FileUploadSerializer(serializers.Serializer):
 
         # Extract and save additional metadata
         try:
-            if file_type == 'image':
+            if file_type == "image":
                 with PILImage.open(file_path) as img:
                     instance.width = img.width
                     instance.height = img.height
                     instance.channels = len(img.getbands())
             else:
-                with open(file_path, 'rb') as f:
+                with open(file_path, "rb") as f:
                     pdf = PdfReader(f)
                     instance.num_pages = len(pdf.pages)
                     # Get dimensions of first page
@@ -78,3 +80,60 @@ class FileUploadSerializer(serializers.Serializer):
 
         instance.save()
         return instance
+
+
+class ImageListSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Image
+        fields = [
+            "id",
+            "title",
+            "file_url",
+            "width",
+            "height",
+            "channels",
+            "uploaded_at",
+        ]
+
+    def get_file_url(self, obj):
+        """
+        Convert the file path to a URL relative to MEDIA_URL.
+        This makes it easier for clients to construct the full URL to the image.
+        """
+        if obj.file_path:
+            # Remove MEDIA_ROOT prefix to get relative path
+            relative_path = os.path.relpath(obj.file_path, settings.MEDIA_ROOT)
+            return os.path.join(settings.MEDIA_URL, relative_path)
+        return None
+
+
+class PDFListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing PDF documents with their metadata.
+    Similar to ImageListSerializer, we include a relative URL for file access.
+    """
+
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PDF
+        fields = [
+            "id",
+            "title",
+            "file_url",
+            "num_pages",
+            "page_width",
+            "page_height",
+            "uploaded_at",
+        ]
+
+    def get_file_url(self, obj):
+        """
+        Convert the file path to a URL relative to MEDIA_URL.
+        """
+        if obj.file_path:
+            relative_path = os.path.relpath(obj.file_path, settings.MEDIA_ROOT)
+            return os.path.join(settings.MEDIA_URL, relative_path)
+        return None
