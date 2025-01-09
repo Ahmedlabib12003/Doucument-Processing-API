@@ -137,3 +137,107 @@ class PDFListSerializer(serializers.ModelSerializer):
             relative_path = os.path.relpath(obj.file_path, settings.MEDIA_ROOT)
             return os.path.join(settings.MEDIA_URL, relative_path)
         return None
+
+
+class ImageDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for detailed image information.
+    Includes all metadata and file information for a single image.
+    """
+
+    file_url = serializers.SerializerMethodField()
+    file_size = serializers.SerializerMethodField()
+    mime_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Image
+        fields = [
+            "id",
+            "title",
+            "file_url",
+            "width",
+            "height",
+            "channels",
+            "uploaded_at",
+            "file_size",
+            "mime_type",
+        ]
+
+    def get_file_url(self, obj):
+        if obj.file_path:
+            relative_path = os.path.relpath(obj.file_path, settings.MEDIA_ROOT)
+            return os.path.join(settings.MEDIA_URL, relative_path)
+        return None
+
+    def get_file_size(self, obj):
+        """Returns the file size in bytes"""
+        try:
+            return os.path.getsize(obj.file_path)
+        except (OSError, FileNotFoundError):
+            return None
+
+    def get_mime_type(self, obj):
+        """Determines the MIME type of the image"""
+        try:
+            with PILImage.open(obj.file_path) as img:
+                return f"image/{img.format.lower()}"
+        except Exception:
+            return "image/unknown"
+
+
+class PDFDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for detailed PDF information.
+    Includes comprehensive metadata about the PDF document.
+    """
+
+    file_url = serializers.SerializerMethodField()
+    file_size = serializers.SerializerMethodField()
+    author = serializers.SerializerMethodField()
+    creation_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PDF
+        fields = [
+            "id",
+            "title",
+            "file_url",
+            "num_pages",
+            "page_width",
+            "page_height",
+            "uploaded_at",
+            "file_size",
+            "author",
+            "creation_date",
+        ]
+
+    def get_file_url(self, obj):
+        if obj.file_path:
+            relative_path = os.path.relpath(obj.file_path, settings.MEDIA_ROOT)
+            return os.path.join(settings.MEDIA_URL, relative_path)
+        return None
+
+    def get_file_size(self, obj):
+        """Returns the file size in bytes"""
+        try:
+            return os.path.getsize(obj.file_path)
+        except (OSError, FileNotFoundError):
+            return None
+
+    def get_author(self, obj):
+        """Extracts author information from PDF metadata"""
+        try:
+            with open(obj.file_path, "rb") as f:
+                pdf = PdfReader(f)
+                return pdf.metadata.get("/Author", None)
+        except Exception:
+            return None
+
+    def get_creation_date(self, obj):
+        """Extracts creation date from PDF metadata"""
+        try:
+            with open(obj.file_path, "rb") as f:
+                pdf = PdfReader(f)
+                return pdf.metadata.get("/CreationDate", None)
+        except Exception:
+            return None
